@@ -1,18 +1,16 @@
-package com.jrvermeer.psalter.helpers
+package com.psalter2.psalter.helpers
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
-import android.media.MediaPlayer
-import android.os.Build
 import androidx.media.AudioAttributesCompat
 import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
-import com.jrvermeer.psalter.infrastructure.IPlayer
+import com.psalter2.psalter.infrastructure.IPlayer
 
-import com.jrvermeer.psalter.infrastructure.Logger
-import com.jrvermeer.psalter.infrastructure.MediaServiceBinder
+import com.psalter2.psalter.infrastructure.Logger
+import com.psalter2.psalter.infrastructure.MediaServiceBinder
 
 class AudioHelper(context: Context, private val binder: MediaServiceBinder, private val mediaPlayer: IPlayer): AudioManager.OnAudioFocusChangeListener {
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager

@@ -1,41 +1,60 @@
-package com.jrvermeer.psalter.ui
+package com.psalter2.psalter.ui
 
-import kotlinx.android.synthetic.main.activity_main.*
-
-import com.jrvermeer.psalter.models.*
-import com.jrvermeer.psalter.infrastructure.*
-import com.jrvermeer.psalter.ui.adaptors.*
-
-import android.app.Service
+import android.Manifest
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Bundle
 import android.os.IBinder
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
-import androidx.viewpager.widget.ViewPager
-import androidx.appcompat.widget.SearchView
-import androidx.appcompat.widget.Toolbar
 import android.text.InputType
 import android.util.TypedValue
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.AppCompatButton
+import androidx.appcompat.widget.SearchView
+import androidx.core.app.ActivityCompat
+import androidx.core.view.get
+import androidx.core.view.size
+import androidx.lifecycle.LifecycleOwner
+import androidx.viewpager.widget.ViewPager
 import com.google.android.material.snackbar.Snackbar
-import com.jrvermeer.psalter.*
-import com.jrvermeer.psalter.helpers.*
+import com.psalter2.psalter.R
+import com.psalter2.psalter.databinding.ActivityMainBinding
+import com.psalter2.psalter.helpers.DownloadHelper
+import com.psalter2.psalter.helpers.InstantHelper
+import com.psalter2.psalter.helpers.IntentHelper
+import com.psalter2.psalter.helpers.RateHelper
+import com.psalter2.psalter.helpers.StorageHelper
+import com.psalter2.psalter.helpers.TutorialHelper
+import com.psalter2.psalter.hide
+import com.psalter2.psalter.infrastructure.Logger
+import com.psalter2.psalter.infrastructure.MediaService
+import com.psalter2.psalter.infrastructure.MediaServiceBinder
+import com.psalter2.psalter.infrastructure.PsalterDb
+import com.psalter2.psalter.models.LogEvent
+import com.psalter2.psalter.models.MediaServiceCallbacks
+import com.psalter2.psalter.models.MessageLength
+import com.psalter2.psalter.models.Psalter
+import com.psalter2.psalter.models.SearchMode
+import com.psalter2.psalter.models.forSnack
+import com.psalter2.psalter.recreateSafe
+import com.psalter2.psalter.show
+import com.psalter2.psalter.ui.adaptors.PsalterPagerAdapter
+import com.psalter2.psalter.ui.adaptors.PsalterSearchAdapter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
-import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.cancel
 
-
 class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), LifecycleOwner {
-
+    private lateinit var binding: ActivityMainBinding
     private lateinit var storage: StorageHelper
     private lateinit var rateHelper: RateHelper
     private lateinit var instant: InstantHelper
@@ -46,8 +65,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
     private lateinit var downloader: DownloadHelper
     private var mediaService: MediaServiceBinder? = null
     private var menu: Menu? = null
-
-    private val selectedPsalter get() = psalterDb.getIndex(viewPager.currentItem)
+    private val selectedPsalter get() = psalterDb.getIndex(binding.viewPager.currentItem)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Logger.init(this)
@@ -63,20 +81,34 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         // must be done before super(), or onCreate() will be called twice and tutorials won't work
         AppCompatDelegate.setDefaultNightMode(if(storage.nightMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
         initViews()
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (binding.lvSearchResults.isShown) {
+                    collapseSearchView()
+                } else {
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
 
         storage.launchCount++
         // instant.transferInstantAppData() doesn't work anyways
 
-        tutorials.showScoreTutorial(fabToggleScore)
-        tutorials.showShuffleTutorial(fab)
+        tutorials.showScoreTutorial(binding.fabToggleScore)
+        tutorials.showShuffleTutorial(binding.fab)
     }
 
     override fun onStart() {
         super.onStart()
-        // initialize media service
-        bindService(Intent(this@MainActivity, MediaService::class.java), mConnection, Service.BIND_AUTO_CREATE)
+        bindService(Intent(this@MainActivity, MediaService::class.java), mConnection, BIND_AUTO_CREATE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+                snack("Need permission for showing media in notification.", MessageLength.Indefinite, "Allow", onClick =
+                    { ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101) })
     }
 
     override fun onStop() {
@@ -88,12 +120,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
     override fun onDestroy() {
         super.onDestroy()
         cancel()
-    }
-    override fun onBackPressed() {
-        if (lvSearchResults.isShown) {
-            collapseSearchView()
-        } else
-            super.onBackPressed()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -107,7 +133,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
 
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         menu?.findItem(R.id.action_downloadAll)?.isVisible = !storage.allMediaDownloaded && !instant.isInstantApp
-        if(storage.fabLongPressCount > 7) menu?.findItem(R.id.action_shuffle)?.isVisible = false
+        if (storage.fabLongPressCount > 7) menu?.findItem(R.id.action_shuffle)?.isVisible = false
         return true
     }
 
@@ -129,7 +155,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
     }
 
     private fun setFontScale(scale: Float) {
-        val adapter = viewPager.adapter as PsalterPagerAdapter
+        val adapter = binding.viewPager.adapter as PsalterPagerAdapter
         storage.textScale = scale
         adapter.updateViews()
         updateViewPagerTitleTextSize()
@@ -146,7 +172,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         } else {
             Logger.event(LogEvent.GoToRandom)
             val next = psalterDb.getRandom()
-            viewPager.setCurrentItem(next.id, true)
+            binding.viewPager.setCurrentItem(next.id, true)
         }
         rateHelper.showRateDialogIfAppropriate()
     }
@@ -167,15 +193,15 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
     }
     private fun performLyricSearch(query: String, logEvent: Boolean) {
         showSearchResultsScreen()
-        (lvSearchResults.adapter as PsalterSearchAdapter).queryPsalter(query)
-        lvSearchResults.setSelectionAfterHeaderView()
+        (binding.lvSearchResults.adapter as PsalterSearchAdapter).queryPsalter(query)
+        binding.lvSearchResults.setSelectionAfterHeaderView()
         if(logEvent) Logger.searchLyrics(query)
     }
     private fun performPsalmSearch(psalm: Int) {
         if (psalm in 1..150) {
             showSearchResultsScreen()
-            (lvSearchResults.adapter as PsalterSearchAdapter).getAllFromPsalm(psalm)
-            lvSearchResults.setSelectionAfterHeaderView()
+            (binding.lvSearchResults.adapter as PsalterSearchAdapter).getAllFromPsalm(psalm)
+            binding.lvSearchResults.setSelectionAfterHeaderView()
             Logger.searchPsalm(psalm)
         }
         else snack("Pick a number between 1 and 150")
@@ -183,7 +209,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
 
     private fun showFavorites(): Boolean {
         if(!psalterDb.getFavorites().any()) {
-            tutorials.showAddToFavoritesTutorial(fabToggleFavorite)
+            tutorials.showAddToFavoritesTutorial(binding.fabToggleFavorite)
             return false
         }
 
@@ -191,40 +217,40 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         menu?.hideAll()
         showSearchResultsScreen()
 
-        (lvSearchResults.adapter as PsalterSearchAdapter).showFavorites()
-        lvSearchResults.setSelectionAfterHeaderView()
+        (binding.lvSearchResults.adapter as PsalterSearchAdapter).showFavorites()
+        binding.lvSearchResults.setSelectionAfterHeaderView()
         return true
     }
 
 
     private fun showSearchButtons() {
-        tableButtons.show()
+        binding.tableButtons.show()
         hideFabs()
     }
     private fun hideSearchButtons() {
-        tableButtons.hide()
+        binding.tableButtons.hide()
         showFabs()
     }
 
     private fun showFabs(){
-        fabToggleScore.show()
-        fabToggleFavorite.show()
-        fab.show()
+        binding.fabToggleScore.show()
+        binding.fabToggleFavorite.show()
+        binding.fab.show()
     }
     private fun  hideFabs(){
-        fabToggleScore.hide()
-        fabToggleFavorite.hide()
-        fab.hide()
+        binding.fabToggleScore.hide()
+        binding.fabToggleFavorite.hide()
+        binding.fab.hide()
     }
 
     private fun showSearchResultsScreen() {
-        lvSearchResults.show()
-        viewPager.hide()
+        binding.lvSearchResults.show()
+        binding.viewPager.hide()
         hideFabs()
     }
     private fun hideSearchResultsScreen() {
-        lvSearchResults.hide()
-        viewPager.show()
+        binding.lvSearchResults.hide()
+        binding.viewPager.show()
         showFabs()
     }
 
@@ -235,7 +261,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
     }
 
     private fun goToId(id: Int){
-        viewPager.setCurrentItem(id, true) //viewpager goes by index
+        binding.viewPager.setCurrentItem(id, true) //viewpager goes by index
     }
     private fun goToPsalter(psalterNumber: Int) {
         val psalter = psalterDb.getPsalter(psalterNumber)!!
@@ -243,17 +269,17 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
     }
 
     private fun toggleScore() {
-        val adapter = viewPager.adapter as PsalterPagerAdapter
+        val adapter = binding.viewPager.adapter as PsalterPagerAdapter
         storage.scoreShown = !storage.scoreShown
         adapter.updateViews()
-        fabToggleScore.isSelected = storage.scoreShown
+        binding.fabToggleScore.isSelected = storage.scoreShown
         Logger.changeScore(storage.scoreShown)
     }
 
     private fun toggleFavorite() {
         psalterDb.toggleFavorite(selectedPsalter!!)
-        fabToggleFavorite.isSelected = !fabToggleFavorite.isSelected
-        tutorials.showViewFavoritesTutorial(toolbar as Toolbar)
+        binding.fabToggleFavorite.isSelected = !binding.fabToggleFavorite.isSelected
+        tutorials.showViewFavoritesTutorial(binding.toolbar)
     }
 
     private fun togglePlay() {
@@ -269,7 +295,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
     }
 
     private fun shuffle(showLongPressTutorial: Boolean = false): Boolean {
-        if(showLongPressTutorial) tutorials.showShuffleReminderTutorial(fab)
+        if(showLongPressTutorial) tutorials.showShuffleReminderTutorial(binding.fab)
         else storage.fabLongPressCount++
 
         mediaService?.play(selectedPsalter!!, true)
@@ -282,8 +308,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         try {
             val tvNumber = (view.tag as PsalterSearchAdapter.ViewHolder).tvNumber
             val tvId = (view.tag as PsalterSearchAdapter.ViewHolder).tvId
-            val num = Integer.parseInt(tvNumber!!.text.toString())
-            val id = Integer.parseInt(tvId!!.text.toString())
+            val num = Integer.parseInt(tvNumber.text.toString())
+            val id = Integer.parseInt(tvId.text.toString())
 
             //log event before collapsing searchview, so we can log the query text
             Logger.searchEvent(searchMode, searchView.query.toString(), num)
@@ -300,7 +326,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
     private fun onPageSelected(index: Int, view: View?) {
         Logger.d("Page selected: $index")
         storage.pageIndex = index
-        fabToggleFavorite.isSelected = selectedPsalter?.isFavorite ?: false
+        binding.fabToggleFavorite.isSelected = selectedPsalter?.isFavorite ?: false
         if (mediaService?.isPlaying == true && mediaService?.currentMediaId != index) { // if we're playing audio of a different #, stop it
             mediaService?.stop()
         }
@@ -318,13 +344,13 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         }
     }
 
-    private var callback = object : MediaServiceCallbacks () {
+    private var callback = object : MediaServiceCallbacks() {
         override fun onPlaybackStateChanged(state: PlaybackStateCompat) {
-            fab.isSelected = mediaService?.isPlaying ?: false
+            binding.fab.isSelected = mediaService?.isPlaying ?: false
         }
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
-            if (mediaService?.isPlaying == true) viewPager.currentItem = metadata!!.description.mediaId!!.toInt()
+            if (mediaService?.isPlaying == true) binding.viewPager.currentItem = metadata!!.description.mediaId!!.toInt()
         }
 
         override fun onAudioUnavailable(psalter: Psalter) {
@@ -345,45 +371,45 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
             _searchMode = mode
             searchView.setQuery("", false)
             when(mode) {
-                SearchMode.Lyrics -> {
+                SearchMode.Lyrics, SearchMode.Favorites -> {
                     searchView.inputType = InputType.TYPE_CLASS_TEXT
                     searchView.queryHint = "Enter search query"
-                    searchBtn_Lyrics.deselect(searchBtn_Psalter, searchBtn_Psalm)
+                    binding.searchBtnLyrics.deselect(binding.searchBtnPsalter, binding.searchBtnPsalm)
                 }
                 SearchMode.Psalm -> {
                     searchView.inputType = InputType.TYPE_CLASS_NUMBER
                     searchView.queryHint = "Enter Psalm (1 - 150)"
-                    searchBtn_Psalm.deselect(searchBtn_Psalter, searchBtn_Lyrics)
+                    binding.searchBtnPsalm.deselect(binding.searchBtnPsalter, binding.searchBtnLyrics)
                 }
                 SearchMode.Psalter -> {
                     searchView.inputType = InputType.TYPE_CLASS_NUMBER
                     searchView.queryHint = "Enter Psalter number (1 - 434)"
-                    searchBtn_Psalter.deselect(searchBtn_Psalm, searchBtn_Lyrics)
+                    binding.searchBtnPsalter.deselect(binding.searchBtnPsalm, binding.searchBtnLyrics)
                 }
             }
         }
 
     private fun initViews() {
-        setSupportActionBar(toolbar as Toolbar)
+        setSupportActionBar(binding.toolbar)
 
-        fab.setOnClickListener { togglePlay() }
-        fab.setOnLongClickListener { shuffle() }
+        binding.fab.setOnClickListener { togglePlay() }
+        binding.fab.setOnLongClickListener { shuffle() }
 
-        fabToggleScore.setOnClickListener { toggleScore() }
-        fabToggleScore.isSelected = storage.scoreShown
+        binding.fabToggleScore.setOnClickListener { toggleScore() }
+        binding.fabToggleScore.isSelected = storage.scoreShown
 
-        fabToggleFavorite.setOnClickListener { toggleFavorite() }
-        fabToggleFavorite.isSelected = psalterDb.getIndex(storage.pageIndex)?.isFavorite ?: false
+        binding.fabToggleFavorite.setOnClickListener { toggleFavorite() }
+        binding.fabToggleFavorite.isSelected = psalterDb.getIndex(storage.pageIndex)?.isFavorite ?: false
 
-        searchBtn_Psalm.setOnClickListener { searchMode = SearchMode.Psalm }
-        searchBtn_Lyrics.setOnClickListener { searchMode = SearchMode.Lyrics }
-        searchBtn_Psalter.setOnClickListener { searchMode = SearchMode.Psalter }
+        binding.searchBtnPsalm.setOnClickListener { searchMode = SearchMode.Psalm }
+        binding.searchBtnLyrics.setOnClickListener { searchMode = SearchMode.Lyrics }
+        binding.searchBtnPsalter.setOnClickListener { searchMode = SearchMode.Psalter }
 
         val viewPagerAdapter = PsalterPagerAdapter(this, this, psalterDb, downloader, storage)
-        viewPager.adapter = viewPagerAdapter
-        viewPager.currentItem = storage.pageIndex
+        binding.viewPager.adapter = viewPagerAdapter
+        binding.viewPager.currentItem = storage.pageIndex
         updateViewPagerTitleTextSize()
-        viewPager.addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
+        binding.viewPager.addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
             override fun onPageScrollStateChanged(state: Int) {}
             override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {}
             override fun onPageSelected(position: Int) {
@@ -391,11 +417,11 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
             }
         })
 
-        lvSearchResults.adapter = PsalterSearchAdapter(this, psalterDb, storage)
-        lvSearchResults.setOnItemClickListener { _, view, _, _ -> onItemClick(view) }
+        binding.lvSearchResults.adapter = PsalterSearchAdapter(this, psalterDb, storage)
+        binding.lvSearchResults.setOnItemClickListener { _, view, _, _ -> onItemClick(view) }
     }
     private fun updateViewPagerTitleTextSize(){
-        viewPagerTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18 * storage.textScale)
+        binding.viewPagerTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18 * storage.textScale)
     }
     private fun initSearchView(menu: Menu){
         searchMenuItem = menu.findItem(R.id.action_search)
@@ -403,7 +429,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 when (searchMode) {
-                    SearchMode.Lyrics -> performLyricSearch(query ?: "", true)
+                    SearchMode.Lyrics, SearchMode.Favorites -> performLyricSearch(query ?: "", true)
                     SearchMode.Psalm -> performPsalmSearch(query?.toIntOrNull() ?: 0)
                     SearchMode.Psalter -> performPsalterSearch(query?.toIntOrNull() ?: 0)
                 }
@@ -436,10 +462,10 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
     }
 
     private fun snack(msg: String, len: MessageLength = MessageLength.Long){
-        Snackbar.make(mainCoordLayout, msg, len.forSnack()).show()
+        Snackbar.make(binding.mainCoordinatorLayout, msg, len.forSnack()).show()
     }
     private fun snack(msg: String, len: MessageLength, action: String, onClick: () -> Unit){
-        Snackbar.make(mainCoordLayout, msg, len.forSnack())
+        Snackbar.make(binding.mainCoordinatorLayout, msg, len.forSnack())
                 .setAction(action) { onClick() }.show()
     }
 
@@ -449,8 +475,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
     }
 
     private fun Menu.hideAll(except: MenuItem? = null) {
-        for (i in 0 until this.size()) {
-            val item = this.getItem(i)
+        for (i in 0 until this.size) {
+            val item = this[i]
             if (item != except) item.isVisible = false
         }
     }

@@ -1,8 +1,8 @@
-package com.jrvermeer.psalter.helpers
+package com.psalter2.psalter.helpers
 
 import android.media.MediaPlayer
 import android.os.Build
-import com.jrvermeer.psalter.infrastructure.IPlayer
+import com.psalter2.psalter.infrastructure.IPlayer
 import java.lang.Exception
 
 class SafeMediaPlayer : MediaPlayer(), IPlayer {

@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/mainCoordLayout"
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main_coordinator_layout"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".ui.MainActivity"
     android:layout_height="match_parent"
     android:layout_width="match_parent"
     android:keepScreenOn="true">
@@ -12,17 +14,22 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        tools:context="com.jrvermeer.psalter.ui.Activities.MainActivity">
+        tools:context="com.psalter2.psalter.ui.Activities.MainActivity">
 
-        <include
+        <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
-            layout="@layout/toolbar"></include>
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:title="@string/app_name"
+            android:theme="@style/Theme.AppCompat"
+            app:menu="@menu/menu_options"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.DayNight"
+            android:background="@color/colorPrimary"/>
 
         <ListView
             android:id="@+id/lvSearchResults"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_below="@id/toolbar"
             android:layout_weight="1"
             android:orientation="vertical"
             android:visibility="gone">
@@ -50,24 +57,30 @@
             android:stretchColumns="*"
             android:visibility="gone">
 
-            <TableRow android:gravity="center" >
+            <TableRow android:gravity="center"
+                tools:ignore="UselessParent">
+
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/searchBtn_Psalter"
-                    android:text="Psalter #"
+                    android:text="@string/psalter"
                     android:theme="@style/ToggleButton"/>
 
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/searchBtn_Lyrics"
-                    android:text="Lyrics"
+                    android:text="@string/lyrics"
                     android:theme="@style/ToggleButton" />
 
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/searchBtn_Psalm"
-                    android:text="Psalm #"
+                    android:text="@string/psalm"
                     android:theme="@style/ToggleButton" />
+
             </TableRow>
+
         </TableLayout>
+
     </LinearLayout>
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabToggleScore"
         android:layout_width="wrap_content"
@@ -78,6 +91,7 @@
         android:theme="@style/SecondaryFab"
         android:src="@drawable/ic_clef_3"
         android:tint="@color/button"
+        android:contentDescription="@string/toggle_score"
         app:fabSize="mini"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -90,6 +104,7 @@
         android:theme="@style/SecondaryFab"
         android:src="@drawable/baseline_star_rate_white_24"
         android:tint="@color/button"
+        android:contentDescription="@string/toggle_favorite"
         app:fabSize="mini"/>
 
     <!-- a = angle from top of screen, straight down to middle of big fab, over to middle of favorites fab -->
@@ -104,6 +119,7 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
         android:theme="@style/PrimaryFab"
-        android:src="@drawable/play_pause"/>
+        android:src="@drawable/play_pause"
+        android:contentDescription="@string/media_control"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

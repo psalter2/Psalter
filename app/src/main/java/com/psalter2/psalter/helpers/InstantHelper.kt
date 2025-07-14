@@ -1,4 +1,4 @@
-package com.jrvermeer.psalter.helpers
+package com.psalter2.psalter.helpers
 
 import android.content.Context
 import android.os.Build
@@ -10,7 +10,7 @@ class InstantHelper(val context: Context){
         if(isInstantApp) return
 
         val instantAppFiles = context.filesDir.list()
-        if(instantAppFiles.isNotEmpty()) {
+        if(instantAppFiles != null && instantAppFiles.isNotEmpty()) {
             val externalDir = context.getExternalFilesDir(null) ?: return
             for(fileName in instantAppFiles){
                 val sourceFile = File(context.filesDir, fileName)

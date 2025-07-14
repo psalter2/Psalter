@@ -1,18 +1,27 @@
-package com.jrvermeer.psalter.helpers
+package com.psalter2.psalter.helpers
 
 import android.app.AlertDialog
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Context.DOWNLOAD_SERVICE
-import android.net.Uri
 import android.os.Build
-import com.jrvermeer.psalter.R
-import com.jrvermeer.psalter.infrastructure.Logger
-import com.jrvermeer.psalter.infrastructure.PsalterDb
-import com.jrvermeer.psalter.models.LogEvent
-import com.jrvermeer.psalter.models.Psalter
-import kotlinx.coroutines.*
-import java.io.*
+import androidx.core.net.toUri
+import com.psalter2.psalter.R
+import com.psalter2.psalter.infrastructure.Logger
+import com.psalter2.psalter.infrastructure.PsalterDb
+import com.psalter2.psalter.models.LogEvent
+import com.psalter2.psalter.models.Psalter
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.BufferedInputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStream
 import java.net.URL
 
 class DownloadHelper(private val context: Context, private val storage: StorageHelper) {
@@ -101,7 +110,7 @@ class DownloadHelper(private val context: Context, private val storage: StorageH
 
     private fun getDownloadRequest(psalter: Psalter, media: PsalterMedia): DownloadManager.Request {
         val path =  if(media == PsalterMedia.Audio) psalter.audioPath else psalter.scorePath
-        return DownloadManager.Request(Uri.parse(baseUrl + path)).apply {
+        return DownloadManager.Request((baseUrl + path).toUri()).apply {
             setTitle("Downloading ${psalter.title} ${media.name}")
             setDestinationInExternalFilesDir(context, null, path)
             setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)

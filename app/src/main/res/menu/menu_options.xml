@@ -32,26 +32,26 @@
 
     <item android:id="@+id/action_favorites"
         android:orderInCategory="18"
-        android:title="Favorites"
+        android:title="@string/favorites"
         app:showAsAction="never"/>
 
     <item android:id="@+id/action_fontSize"
         android:orderInCategory="19"
-        android:title="Text size"
+        android:title="@string/text_size"
         app:showAsAction="never"
         app:actionViewClass="android.widget.Spinner">
         <menu>
             <item android:id="@+id/action_fontSize_small"
-                android:title="Small" />
+                android:title="@string/small" />
 
             <item android:id="@+id/action_fontSize_normal"
-                android:title="Normal" />
+                android:title="@string/normal" />
 
             <item android:id="@+id/action_fontSize_big"
-                android:title="Big" />
+                android:title="@string/big" />
 
             <item android:id="@+id/action_fontSize_huge"
-                android:title="Huge" />
+                android:title="@string/huge" />
         </menu>
     </item>
 

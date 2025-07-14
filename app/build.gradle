@@ -1,62 +1,85 @@
 apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'com.google.gms.google-services'
+apply plugin: 'com.google.firebase.crashlytics'
 
 android {
+    def keystoreProperties = new Properties()
+    keystoreProperties.load(new FileInputStream(rootProject.file("keystore.properties")))
+
     signingConfigs {
         release {
-            storeFile file('C:\\Users\\Jonathan\\AndroidStudioProjects\\keystore.jks')
-            storePassword 'g1n0wIxlPAZe'
-            keyPassword 'teO9bBGsLls3'
-            keyAlias = 'AndroidKey'
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
         }
     }
-    compileSdkVersion 29
-    buildToolsVersion "28.0.3"
+    compileSdk 36
     defaultConfig {
-        applicationId "com.jrvermeer.psalter"
+        applicationId "com.psalter2.psalter"
         minSdkVersion 23
-        targetSdkVersion 29
-        versionCode 45
-        versionName "3.2.2"
+        targetSdkVersion 34
+        versionCode 3
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+            ndk {
+                debugSymbolLevel 'FULL'
+            }
         }
     }
+    buildFeatures {
+        viewBinding true
+        buildConfig true
+    }
+    applicationVariants.all {
+        it.outputs.all {
+            def ext = it.outputFileName.endsWith('.apk') ? 'apk' : 'aab'
+            it.outputFileName = "psalter2-${versionName}(${versionCode}).${ext}"
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+    kotlin {
+        jvmToolchain(21)
+    }
     useLibrary 'org.apache.http.legacy'
+    namespace 'com.psalter2.psalter'
 }
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    androidTestImplementation('androidx.test.espresso:espresso-core:3.1.0', {
+    androidTestImplementation('androidx.test.espresso:espresso-core:3.6.1', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
 
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.6'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.6'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
 
-
-    implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation 'androidx.media:media:1.2.1'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.media:media:1.7.0'
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
-    implementation 'com.google.android.material:material:1.3.0'
+    implementation 'com.google.android.material:material:1.12.0'
 
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.0-beta-3'
-    implementation 'com.flurry.android:analytics:11.1.0@aar'
+//    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.14'
     implementation 'com.readystatesoftware.sqliteasset:sqliteassethelper:2.0.1'
-    implementation 'com.getkeepsafe.taptargetview:taptargetview:1.13.0'
+    implementation 'com.getkeepsafe.taptargetview:taptargetview:1.15.0'
 
-    testImplementation 'junit:junit:4.12'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-//    implementation 'com.google.android.exoplayer:exoplayer:2.11.5'
+    testImplementation 'junit:junit:4.13.2'
 
-    // play core, for in-app review
-    implementation 'com.google.android.play:core:1.9.1'
-    implementation 'com.google.android.play:core-ktx:1.8.1'
+    implementation 'com.google.android.play:review-ktx:2.0.2'
+
+    implementation(platform('com.google.firebase:firebase-bom:33.16.0'))
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-crashlytics-ndk'
 }
 repositories {
     mavenCentral()

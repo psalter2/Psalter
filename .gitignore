@@ -1,9 +1,31 @@
+#Ignore all library files
+.idea/
+.idea/libraries/
+.idea/caches/
+#Ignore build files
+build/**
+#Ignore workspace.xml
+.idea/workspace.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/misc.xml
+.idea/assetWizardSettings.xml
 *.iml
-.gradle
-/local.properties
-/.idea/workspace.xml
-/.idea/libraries
-.DS_Store
-/build
-/captures
-.externalNativeBuild
+.idea/jarRepositories.xml
+.idea/dictionaries/joelm.xml
+.idea/codeStyles/Project.xml
+
+# built application files
+*.apk
+*.ap_
+local.properties
+keystore.properties
+app/google-services.json
+*.dm
+app/release/*
+
+upload-keystore.jks
+cache.properties.lock
+*.iws
+.gradle/
+.kotlin/sessions/

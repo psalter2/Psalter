@@ -1,10 +1,10 @@
-package com.jrvermeer.psalter.helpers
+package com.psalter2.psalter.helpers
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.annotation.StringRes
-
-import com.jrvermeer.psalter.R
+import androidx.core.content.edit
+import com.psalter2.psalter.R
 
 class StorageHelper(private val context: Context) {
     private val sPref: SharedPreferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -49,27 +49,27 @@ class StorageHelper(private val context: Context) {
         return sPref.getBoolean(context.getString(id), false)
     }
     fun setBoolean(@StringRes id: Int, b: Boolean) {
-        sPref.edit().putBoolean(context.getString(id), b).apply()
+        sPref.edit { putBoolean(context.getString(id), b) }
     }
 
     fun getInt(@StringRes id: Int, default: Int = 0): Int {
         return sPref.getInt(context.getString(id), default)
     }
     fun setInt(@StringRes id: Int, i: Int) {
-        sPref.edit().putInt(context.getString(id), i).apply()
+        sPref.edit { putInt(context.getString(id), i) }
     }
 
     fun getFloat(@StringRes id: Int, default: Float = 0f): Float {
         return sPref.getFloat(context.getString(id), default)
     }
     fun setFloat(@StringRes id: Int, i: Float) {
-        sPref.edit().putFloat(context.getString(id), i).apply()
+        sPref.edit { putFloat(context.getString(id), i) }
     }
 
     fun getLong(@StringRes id: Int): Long {
         return sPref.getLong(context.getString(id), 0)
     }
     fun setLong(@StringRes id: Int, l: Long) {
-        sPref.edit().putLong(context.getString(id), l).apply()
+        sPref.edit { putLong(context.getString(id), l) }
     }
 }

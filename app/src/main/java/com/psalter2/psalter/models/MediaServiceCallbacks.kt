@@ -1,4 +1,4 @@
-package com.jrvermeer.psalter.models
+package com.psalter2.psalter.models
 
 import android.support.v4.media.session.MediaControllerCompat
 

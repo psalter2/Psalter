@@ -1,35 +1,42 @@
-package com.jrvermeer.psalter.infrastructure
+package com.psalter2.psalter.infrastructure
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
-import androidx.core.app.NotificationManagerCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.view.KeyEvent
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import androidx.media.app.NotificationCompat.MediaStyle
-
-import com.jrvermeer.psalter.models.Psalter
-import com.jrvermeer.psalter.ui.MainActivity
-import com.jrvermeer.psalter.R
-import com.jrvermeer.psalter.helpers.AudioHelper
-import com.jrvermeer.psalter.helpers.DownloadHelper
-import com.jrvermeer.psalter.helpers.SafeMediaPlayer
-import com.jrvermeer.psalter.helpers.StorageHelper
-import kotlinx.coroutines.*
+import com.psalter2.psalter.R
+import com.psalter2.psalter.helpers.AudioHelper
+import com.psalter2.psalter.helpers.DownloadHelper
+import com.psalter2.psalter.helpers.SafeMediaPlayer
+import com.psalter2.psalter.helpers.StorageHelper
+import com.psalter2.psalter.models.Psalter
+import com.psalter2.psalter.ui.MainActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -59,7 +66,7 @@ class MediaService : LifecycleService(), CoroutineScope by MainScope() {
     private lateinit var notificationManager: NotificationManagerCompat
     private lateinit var mediaSession: MediaSessionCompat
     private val mutex = Mutex()
-    private val mediaPlayer: IPlayer = SafeMediaPlayer() // lateinit var initialized in oncreate?
+    private val mediaPlayer: IPlayer = SafeMediaPlayer()
     private var psalter: Psalter? = null
     private var currentVerse = 1
 
@@ -195,7 +202,13 @@ class MediaService : LifecycleService(), CoroutineScope by MainScope() {
 
         // we're only overriding this so we can log the skipToNext event
         override fun onMediaButtonEvent(mediaButtonEvent: Intent?): Boolean {
-            (mediaButtonEvent?.getParcelableExtra(Intent.EXTRA_KEY_EVENT) as KeyEvent?)?.run {
+            val event : KeyEvent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                mediaButtonEvent?.getParcelableExtra(Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                mediaButtonEvent?.getParcelableExtra(Intent.EXTRA_KEY_EVENT)
+            }
+            event?.run {
                 if(action == KeyEvent.ACTION_DOWN // action fires twice: button down && up.
                         && keyCode == KeyEvent.KEYCODE_MEDIA_NEXT // skip to next
                         && ((mediaSession.controller.playbackState.actions and PlaybackStateCompat.ACTION_SKIP_TO_NEXT) != 0L)) { // next is a valid action
@@ -230,7 +243,7 @@ class MediaService : LifecycleService(), CoroutineScope by MainScope() {
 
     private fun playNextVerse(): Boolean {
         if (currentVerse < psalter!!.numverses) {
-            Handler().postDelayed({
+            Handler(mainLooper).postDelayed({
                 if (binder.isPlaying) { // media could have been stopped between verses
                     currentVerse++
                     updateMetaData(psalter!!)
@@ -282,14 +295,25 @@ class MediaService : LifecycleService(), CoroutineScope by MainScope() {
 
     private fun updateNotification() {
         if (!binder.isPlaying) {
-            stopForeground(false)
+            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
+                stopForeground(STOP_FOREGROUND_DETACH)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(false)
+            }
         }
-        notificationManager.notify(NOTIFICATION_ID, notification)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
+            notificationManager.notify(NOTIFICATION_ID, notification)
     }
     private val notification: Notification
         get() {
             val iOpenActivity = Intent(this, MainActivity::class.java)
-            val pendingOpenActivity = PendingIntent.getActivity(this, 0, iOpenActivity, PendingIntent.FLAG_UPDATE_CURRENT)
+            var flags = PendingIntent.FLAG_UPDATE_CURRENT
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                flags = flags or PendingIntent.FLAG_IMMUTABLE
+            }
+            val pendingOpenActivity = PendingIntent.getActivity(this, 0, iOpenActivity, flags)
 
             var numActions = 0
             val builder = NotificationCompat.Builder(this@MediaService, NOTIFICATION_CHANNEL_ID)
@@ -305,15 +329,18 @@ class MediaService : LifecycleService(), CoroutineScope by MainScope() {
             if(psalter?.score != null) builder.setLargeIcon(psalter?.score?.bitmap)
 
             if (mediaSession.controller.playbackState.state == PlaybackStateCompat.STATE_PLAYING) {
-                builder.addAction(R.drawable.ic_stop_white_36dp, "Stop", getPendingIntent(ACTION_STOP, 1))
+                builder.addAction(R.drawable.ic_stop_white_36dp, "Stop", getPendingIntent(
+                    ACTION_STOP, 1))
                         .priority = NotificationCompat.PRIORITY_HIGH
             } else {
-                builder.addAction(R.drawable.ic_play_arrow_white_36dp, "Play", getPendingIntent(ACTION_PLAY, 2))
+                builder.addAction(R.drawable.ic_play_arrow_white_36dp, "Play", getPendingIntent(
+                    ACTION_PLAY, 2))
             }
             numActions++
 
             if (binder.isShuffling) {
-                builder.addAction(R.drawable.ic_skip_next_white_36dp, "Next", getPendingIntent(ACTION_SKIP_TO_NEXT, 3))
+                builder.addAction(R.drawable.ic_skip_next_white_36dp, "Next", getPendingIntent(
+                    ACTION_SKIP_TO_NEXT, 3))
                 numActions++
             }
             builder.setStyle(MediaStyle()
@@ -331,13 +358,17 @@ class MediaService : LifecycleService(), CoroutineScope by MainScope() {
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
             val channel = NotificationChannel(NOTIFICATION_CHANNEL_ID, NOTIFICATION_CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW)
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
     }
 
     private fun getPendingIntent(action: String?, i: Int): PendingIntent {
         val intent = Intent(this, MediaService::class.java).setAction(action)
-        return PendingIntent.getService(this, i, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+        var flags = PendingIntent.FLAG_UPDATE_CURRENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            flags = flags or PendingIntent.FLAG_IMMUTABLE
+        }
+        return PendingIntent.getService(this, i, intent, flags)
     }
 }

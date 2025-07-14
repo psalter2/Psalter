@@ -1,21 +1,22 @@
-package com.jrvermeer.psalter.helpers
+package com.psalter2.psalter.helpers
 
 import android.app.Activity
 import com.google.android.play.core.review.ReviewManagerFactory
-import com.jrvermeer.psalter.infrastructure.Logger
+import com.psalter2.psalter.infrastructure.Logger
 import java.util.concurrent.TimeUnit
 
 class RateHelper(private val activity: Activity,
-                 private val storage: StorageHelper) {
+                 private val storage: StorageHelper
+) {
 
     fun showRateDialogIfAppropriate() {
         if (!shouldShowDialog()) return
 
         val manager = ReviewManagerFactory.create(activity)
         val request = manager.requestReviewFlow()
-        request.addOnCompleteListener { request ->
-            if (request.isSuccessful) {
-                val reviewInfo = request.result
+        request.addOnCompleteListener {
+            if (it.isSuccessful) {
+                val reviewInfo = it.result
                 manager.launchReviewFlow(activity, reviewInfo)
                 showRatePromptAttempted()
             }

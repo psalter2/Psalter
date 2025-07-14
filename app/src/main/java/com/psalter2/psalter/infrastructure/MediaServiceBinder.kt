@@ -1,12 +1,12 @@
-package com.jrvermeer.psalter.infrastructure
+package com.psalter2.psalter.infrastructure
 
 import android.content.Context
 import android.content.Intent
 import android.os.Binder
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import com.jrvermeer.psalter.models.MediaServiceCallbacks
-import com.jrvermeer.psalter.models.Psalter
+import com.psalter2.psalter.models.MediaServiceCallbacks
+import com.psalter2.psalter.models.Psalter
 
 class MediaServiceBinder(private val mediaSession: MediaSessionCompat) : Binder() {
     private val _player = mediaSession.controller.transportControls

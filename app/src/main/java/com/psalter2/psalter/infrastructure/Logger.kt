@@ -1,25 +1,20 @@
-package com.jrvermeer.psalter.infrastructure
+package com.psalter2.psalter.infrastructure
 
 import android.content.Context
+import android.os.Bundle
 import android.util.Log
-
-import com.flurry.android.FlurryAgent
-import com.jrvermeer.psalter.models.LogEvent
-import com.jrvermeer.psalter.models.SearchMode
-import com.jrvermeer.psalter.R
-import com.jrvermeer.psalter.models.Psalter
-
-/**
- * Created by Jonathan on 7/17/2018.
- */
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.psalter2.psalter.models.LogEvent
+import com.psalter2.psalter.models.Psalter
+import com.psalter2.psalter.models.SearchMode
 
 object Logger {
     private const val TAG = "PsalterLog"
+    private var firebaseAnalytics: FirebaseAnalytics? = null
 
     fun init(context: Context) {
-        FlurryAgent.Builder()
-                .withLogEnabled(true)
-                .build(context, context.resources.getString(R.string.secret_flurry))
+        firebaseAnalytics = FirebaseAnalytics.getInstance(context)
     }
 
     fun d(message: String) {
@@ -28,7 +23,10 @@ object Logger {
 
     fun e(message: String, ex: Throwable?) {
         Log.e(TAG, message, ex)
-        FlurryAgent.onError("Error", message, ex)
+        if (ex != null) {
+            FirebaseCrashlytics.getInstance().log(message)
+            FirebaseCrashlytics.getInstance().recordException(ex)
+        }
     }
 
     fun changeScore(scoreVisible: Boolean) {
@@ -78,6 +76,12 @@ object Logger {
     }
 
     fun event(event: LogEvent, params: Map<String, String>? = null) {
-        FlurryAgent.logEvent(event.name, params)
+        if (params != null) {
+            val bundle = Bundle()
+            params.forEach({
+                bundle.putString(it.key, it.value)
+            })
+            firebaseAnalytics?.logEvent(event.toString(), bundle)
+        }
     }
 }

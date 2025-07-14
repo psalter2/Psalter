@@ -1,21 +1,18 @@
-package com.jrvermeer.psalter.infrastructure
+package com.psalter2.psalter.infrastructure
 
 import android.content.Context
 import android.database.Cursor
 import android.database.DatabaseUtils
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteQueryBuilder
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
-import androidx.lifecycle.OnLifecycleEvent
-import com.jrvermeer.psalter.R
-import com.jrvermeer.psalter.helpers.DownloadHelper
-import com.jrvermeer.psalter.models.Psalter
-import com.jrvermeer.psalter.models.SqLiteQuery
+import com.psalter2.psalter.R
+import com.psalter2.psalter.helpers.DownloadHelper
+import com.psalter2.psalter.models.Psalter
+import com.psalter2.psalter.models.SqLiteQuery
 import com.readystatesoftware.sqliteasset.SQLiteAssetHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import java.util.*
 
 /**
  * Created by Jonathan on 3/27/2017.
@@ -23,14 +20,15 @@ import java.util.*
 // SQLiteAssetHelper: https://github.com/jgilfelt/android-sqlite-asset-helper
 class PsalterDb(private val context: Context,
                 private val scope: CoroutineScope,
-                private val downloader: DownloadHelper) : SQLiteAssetHelper(context.applicationContext, DATABASE_NAME, null, DATABASE_VERSION), LifecycleObserver {
+                private val downloader: DownloadHelper
+) : SQLiteAssetHelper(context.applicationContext, DATABASE_NAME, null, DATABASE_VERSION), LifecycleObserver {
 
     private val db: SQLiteDatabase
     private var nextRandom : Psalter? = null
 
     init {
-        setForcedUpgrade(31) // v31 introduces user data; versions above that must use upgrade scripts to preserve it //https://github.com/jgilfelt/android-sqlite-asset-helper#database-upgrades
-        db = writableDatabase // must be AFTER setForcedUpgrade()
+        setForcedUpgrade(31)
+        db = writableDatabase
         scope.launch { loadNextRandom() }
     }
 
@@ -40,7 +38,6 @@ class PsalterDb(private val context: Context,
         private const val TABLE_NAME = "psalter"
     }
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
     fun onDestroy() {
         Logger.d("OnDestroy - PsalterDb")
         db.close()
@@ -65,7 +62,7 @@ class PsalterDb(private val context: Context,
     fun toggleFavorite(p: Psalter) {
         p.isFavorite = !p.isFavorite
         val newVal = if(p.isFavorite) 1 else 0
-        db.execSQL("update psalter set isFavorite = ? where _id = ?", arrayOf(newVal, p.id.toString()))
+        db.execSQL("update psalter set isFavorite = ? where _id = ?", arrayOf(newVal, p.id))
     }
 
     private fun CoroutineScope.loadNextRandom() {
@@ -116,14 +113,14 @@ class PsalterDb(private val context: Context,
         return hits.toTypedArray()
     }
 
-    private fun queryPsalter(where: String, parms: Array<String>?, limit: String?): Array<Psalter> {
+    private fun queryPsalter(where: String, params: Array<String>?, limit: String?): Array<Psalter> {
         var c: Cursor? = null
         val hits = ArrayList<Psalter>()
         try {
             val qb = SQLiteQueryBuilder()
             val columns = arrayOf("_id", "number", "psalm", "title", "lyrics", "numverses", "heading", "audioFileName", "scoreFileName", "NumVersesInsideStaff", "isFavorite")
             qb.tables = TABLE_NAME
-            c = qb.query(db, columns, where, parms, null, null, null, limit)
+            c = qb.query(db, columns, where, params, null, null, null, limit)
             while (c.moveToNext()) {
                 val p = Psalter()
 

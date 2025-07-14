@@ -1,17 +1,12 @@
-package com.jrvermeer.psalter
+package com.psalter2.psalter
 
 import android.app.Activity
-import android.content.Context
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.drawable.Drawable
 import android.os.Build
 import androidx.annotation.DrawableRes
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import android.view.View
-import android.widget.Toast
-import com.google.android.material.snackbar.Snackbar
-import com.jrvermeer.psalter.infrastructure.MediaServiceBinder
-import java.io.File
 import java.util.ArrayList
 
 fun String.allIndexesOf(query: String): List<Int> {

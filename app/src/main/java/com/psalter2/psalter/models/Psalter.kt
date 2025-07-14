@@ -1,9 +1,10 @@
-package com.jrvermeer.psalter.models
+package com.psalter2.psalter.models
 
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
-import com.jrvermeer.psalter.helpers.DownloadHelper
+import androidx.core.net.toUri
+import com.psalter2.psalter.helpers.DownloadHelper
 import java.io.File
 
 /**
@@ -25,14 +26,14 @@ data class Psalter (
 ) {
     private val passage get() = if (psalm == 0) "Matthew+6:9-13" else "Psalm+$psalm"
     val biblePassage get() = if (psalm == 0) "Lords Prayer" else "Psalm $psalm"
-    val bibleLink get() = "<a href=https://www.biblegateway.com/passage?search=$passage>$biblePassage</a>"
+    val bibleLink get() = "<a href=https://www.biblegateway.com/passage?search=$passage&version=KJV>$biblePassage</a>"
 
     private var _audio: Uri? = null
     val audio get() = _audio
     suspend fun loadAudio(downloader: DownloadHelper): Uri? {
         if(_audio != null) return _audio
         val file = getFile(downloader, audioPath) ?: return null
-        _audio = Uri.parse(file.path)
+        _audio = file.path.toUri()
         return _audio
     }
 

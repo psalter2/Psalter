@@ -1,12 +1,13 @@
-package com.jrvermeer.psalter.helpers
+package com.psalter2.psalter.helpers
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
-import com.jrvermeer.psalter.BuildConfig
+import androidx.core.net.toUri
+import com.psalter2.psalter.BuildConfig
 
 object IntentHelper {
-    val RateIntent get() = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.jrvermeer.psalter"))
+    val RateIntent get() = Intent(Intent.ACTION_VIEW,
+        "https://play.google.com/store/apps/details?id=com.psalter2.psalter".toUri())
     val FeedbackIntent: Intent get() {
         var body = "\n\n\n"
         body += "---------------------------\n"
@@ -14,8 +15,8 @@ object IntentHelper {
         body += "Android version: " + Build.VERSION.RELEASE
 
         return Intent(Intent.ACTION_SENDTO).apply {
-            data = Uri.parse("mailto:")
-            putExtra(Intent.EXTRA_EMAIL, arrayOf("jrvermeer.dev@gmail.com"))
+            data = "mailto:".toUri()
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("psalter2app@gmail.com"))
             putExtra(Intent.EXTRA_SUBJECT, "Psalter App")
             putExtra(Intent.EXTRA_TEXT, body)
         }

@@ -1,4 +1,4 @@
-package com.jrvermeer.psalter.models
+package com.psalter2.psalter.models
 
 /**
  * Created by Jonathan on 7/12/2018.

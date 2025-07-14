@@ -1,4 +1,4 @@
-package com.jrvermeer.psalter.helpers
+package com.psalter2.psalter.helpers
 
 import android.app.Activity
 import androidx.annotation.StringRes
@@ -7,7 +7,7 @@ import androidx.appcompat.widget.Toolbar
 
 import com.getkeepsafe.taptargetview.TapTarget
 import com.getkeepsafe.taptargetview.TapTargetSequence
-import com.jrvermeer.psalter.R
+import com.psalter2.psalter.R
 
 /**
  * Created by Jonathan on 6/22/2018.
