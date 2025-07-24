@@ -1,6 +1,7 @@
 package com.psalter2.psalter.ui
 
 import android.Manifest
+import android.app.UiModeManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
@@ -87,7 +88,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         lifecycle.addObserver(psalterDb)
 
         // must be done before super(), or onCreate() will be called twice and tutorials won't work
-        AppCompatDelegate.setDefaultNightMode(if(storage.nightMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
+        if (Build.VERSION.SDK_INT < 31) {
+            AppCompatDelegate.setDefaultNightMode(if(storage.nightMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
+        }
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -218,7 +221,12 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
     private fun toggleNightMode() {
         storage.nightMode = !storage.nightMode
         Logger.changeTheme(storage.nightMode)
-        recreateSafe()
+        if (Build.VERSION.SDK_INT >= 31) {
+            val uiModeManager = getSystemService(UiModeManager::class.java)
+            uiModeManager.setApplicationNightMode(if(storage.nightMode) UiModeManager.MODE_NIGHT_YES else UiModeManager.MODE_NIGHT_NO)
+        } else {
+            recreateSafe()
+        }
     }
 
     private fun performPsalterSearch(psalterNumber: Int){
