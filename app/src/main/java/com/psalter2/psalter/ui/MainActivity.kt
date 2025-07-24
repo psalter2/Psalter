@@ -88,11 +88,17 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         initViews()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            var shouldExit = false
             override fun handleOnBackPressed() {
                 if (binding.lvSearchResults.isShown) {
                     collapseSearchView()
                 } else {
-                    onBackPressedDispatcher.onBackPressed()
+                    if (shouldExit) finish()
+                    else {
+                        shouldExit = true
+                        snack("Repeat action to leave app", 1200)
+                        Handler(Looper.getMainLooper()).postDelayed({ shouldExit = false }, 1200)
+                    }
                 }
             }
         })
