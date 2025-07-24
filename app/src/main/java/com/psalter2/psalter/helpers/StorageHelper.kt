@@ -13,6 +13,19 @@ class StorageHelper(private val context: Context) {
         get() = getBoolean(R.string.pref_nightmode)
         set(b) = setBoolean(R.string.pref_nightmode, b)
 
+    var recentNumbers
+        get() = getStringList(R.string.action_recents)
+        set(n) = setStringList(R.string.action_recents, n)
+
+    fun addRecentNumber(number: Int) {
+        val numberStr = number.toString()
+        val numbers = buildList {
+            add(numberStr)
+            addAll(recentNumbers.filter { it != numberStr && it.isNotBlank() && it != "," })
+        }.take(25).toCollection(ArrayList())
+        recentNumbers = numbers
+    }
+
     var scoreShown
         get() = getBoolean(R.string.pref_showScore)
         set(b) = setBoolean(R.string.pref_showScore, b)
@@ -71,5 +84,13 @@ class StorageHelper(private val context: Context) {
     }
     fun setLong(@StringRes id: Int, l: Long) {
         sPref.edit { putLong(context.getString(id), l) }
+    }
+
+    fun getStringList(@StringRes id: Int) : ArrayList<String> {
+        val list = sPref.getString(context.getString(id),"")?.split(',')
+        return if (list == null) arrayListOf() else ArrayList(list)
+    }
+    fun setStringList(@StringRes id: Int, l: ArrayList<String>) {
+        sPref.edit { putString(context.getString(id),l.joinToString(",")) }
     }
 }

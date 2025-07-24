@@ -15,6 +15,8 @@ import android.util.TypedValue
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.WindowInsets
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -139,16 +141,18 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.action_nightMode -> toggleNightMode()
+            android.R.id.home -> onBackPressedDispatcher.onBackPressed()
             R.id.action_random -> goToRandom()
-            R.id.action_shuffle -> shuffle(true)
-            R.id.action_sendFeedback -> startActivity(IntentHelper.FeedbackIntent)
-            R.id.action_downloadAll -> queueDownloads()
+            R.id.action_history -> showRecents()
             R.id.action_favorites -> showFavorites()
+            R.id.action_shuffle -> shuffle(true)
+            R.id.action_downloadAll -> queueDownloads()
             R.id.action_fontSize_small -> setFontScale(.875f)
             R.id.action_fontSize_normal -> setFontScale(1f)
             R.id.action_fontSize_big -> setFontScale(1.125f)
             R.id.action_fontSize_huge -> setFontScale(1.25f)
+            R.id.action_nightMode -> toggleNightMode()
+            R.id.action_sendFeedback -> startActivity(IntentHelper.FeedbackIntent)
             else -> return false
         }
         return true
@@ -207,6 +211,16 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         else snack("Pick a number between 1 and 150")
     }
 
+    private fun showRecents(): Boolean {
+        searchMode = SearchMode.Recents
+        menu?.hideAll()
+        showSearchResultsScreen("Recents")
+
+        (binding.lvSearchResults.adapter as PsalterSearchAdapter).showRecents()
+        binding.lvSearchResults.setSelectionAfterHeaderView()
+        return true
+    }
+
     private fun showFavorites(): Boolean {
         if(!psalterDb.getFavorites().any()) {
             tutorials.showAddToFavoritesTutorial(binding.fabToggleFavorite)
@@ -215,13 +229,12 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
 
         searchMode = SearchMode.Favorites
         menu?.hideAll()
-        showSearchResultsScreen()
+        showSearchResultsScreen("Favorites")
 
         (binding.lvSearchResults.adapter as PsalterSearchAdapter).showFavorites()
         binding.lvSearchResults.setSelectionAfterHeaderView()
         return true
     }
-
 
     private fun showSearchButtons() {
         binding.tableButtons.show()
@@ -243,12 +256,18 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         binding.fab.hide()
     }
 
-    private fun showSearchResultsScreen() {
+    private fun showSearchResultsScreen(title: CharSequence? = "Psalter") {
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setHomeButtonEnabled(true)
+        supportActionBar?.title = title
         binding.lvSearchResults.show()
         binding.viewPager.hide()
         hideFabs()
     }
     private fun hideSearchResultsScreen() {
+        supportActionBar?.setDisplayHomeAsUpEnabled(false)
+        supportActionBar?.setHomeButtonEnabled(false)
+        supportActionBar?.title = "Psalter"
         binding.lvSearchResults.hide()
         binding.viewPager.show()
         showFabs()
@@ -266,11 +285,13 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
     private fun goToPsalter(psalterNumber: Int) {
         val psalter = psalterDb.getPsalter(psalterNumber)!!
         goToId(psalter.id)
+        storage.addRecentNumber(psalterNumber)
     }
 
     private fun toggleScore() {
         val adapter = binding.viewPager.adapter as PsalterPagerAdapter
         storage.scoreShown = !storage.scoreShown
+        storage.addRecentNumber(selectedPsalter!!.number)
         adapter.updateViews()
         binding.fabToggleScore.isSelected = storage.scoreShown
         Logger.changeScore(storage.scoreShown)
@@ -278,18 +299,19 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
 
     private fun toggleFavorite() {
         psalterDb.toggleFavorite(selectedPsalter!!)
+        storage.addRecentNumber(selectedPsalter!!.number)
         binding.fabToggleFavorite.isSelected = !binding.fabToggleFavorite.isSelected
         tutorials.showViewFavoritesTutorial(binding.toolbar)
     }
 
     private fun togglePlay() {
+        val psalter = selectedPsalter!!
+        storage.addRecentNumber(psalter.number)
         if (mediaService?.isPlaying == true) {
             mediaService?.stop()
             rateHelper.showRateDialogIfAppropriate()
-        }
-        else {
-            val psalter = selectedPsalter
-            mediaService?.play(psalter!!, false)
+        } else {
+            mediaService?.play(psalter, false)
             mediaService?.startService(this)
         }
     }
@@ -316,6 +338,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
 
             collapseSearchView()
             goToId(id)
+            if (searchMode != SearchMode.Recents) storage.addRecentNumber(num)
             rateHelper.showRateDialogIfAppropriate()
         }
         catch (ex: Exception) {
@@ -371,7 +394,12 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
             _searchMode = mode
             searchView.setQuery("", false)
             when(mode) {
-                SearchMode.Lyrics, SearchMode.Favorites -> {
+                SearchMode.Psalter -> {
+                    searchView.inputType = InputType.TYPE_CLASS_NUMBER
+                    searchView.queryHint = "Enter Psalter number (1 - 434)"
+                    binding.searchBtnPsalter.deselect(binding.searchBtnPsalm, binding.searchBtnLyrics)
+                }
+                SearchMode.Lyrics, SearchMode.Favorites, SearchMode.Recents -> {
                     searchView.inputType = InputType.TYPE_CLASS_TEXT
                     searchView.queryHint = "Enter search query"
                     binding.searchBtnLyrics.deselect(binding.searchBtnPsalter, binding.searchBtnPsalm)
@@ -381,13 +409,21 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
                     searchView.queryHint = "Enter Psalm (1 - 150)"
                     binding.searchBtnPsalm.deselect(binding.searchBtnPsalter, binding.searchBtnLyrics)
                 }
-                SearchMode.Psalter -> {
-                    searchView.inputType = InputType.TYPE_CLASS_NUMBER
-                    searchView.queryHint = "Enter Psalter number (1 - 434)"
-                    binding.searchBtnPsalter.deselect(binding.searchBtnPsalm, binding.searchBtnLyrics)
-                }
             }
         }
+
+    fun updateSearchMode(mode : SearchMode) {
+        searchMode = mode
+        searchView.post {
+            searchView.requestFocus()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                searchView.windowInsetsController?.show(WindowInsets.Type.ime())
+            } else {
+                val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.showSoftInput(searchView, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
+    }
 
     private fun initViews() {
         setSupportActionBar(binding.toolbar)
@@ -401,9 +437,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         binding.fabToggleFavorite.setOnClickListener { toggleFavorite() }
         binding.fabToggleFavorite.isSelected = psalterDb.getIndex(storage.pageIndex)?.isFavorite ?: false
 
-        binding.searchBtnPsalm.setOnClickListener { searchMode = SearchMode.Psalm }
-        binding.searchBtnLyrics.setOnClickListener { searchMode = SearchMode.Lyrics }
-        binding.searchBtnPsalter.setOnClickListener { searchMode = SearchMode.Psalter }
+        binding.searchBtnPsalter.setOnClickListener { updateSearchMode(SearchMode.Psalter) }
+        binding.searchBtnLyrics.setOnClickListener { updateSearchMode(SearchMode.Lyrics) }
+        binding.searchBtnPsalm.setOnClickListener { updateSearchMode(SearchMode.Psalm) }
 
         val viewPagerAdapter = PsalterPagerAdapter(this, this, psalterDb, downloader, storage)
         binding.viewPager.adapter = viewPagerAdapter
@@ -429,9 +465,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 when (searchMode) {
-                    SearchMode.Lyrics, SearchMode.Favorites -> performLyricSearch(query ?: "", true)
-                    SearchMode.Psalm -> performPsalmSearch(query?.toIntOrNull() ?: 0)
                     SearchMode.Psalter -> performPsalterSearch(query?.toIntOrNull() ?: 0)
+                    SearchMode.Lyrics, SearchMode.Favorites, SearchMode.Recents -> performLyricSearch(query ?: "", true)
+                    SearchMode.Psalm -> performPsalmSearch(query?.toIntOrNull() ?: 0)
                 }
                 searchView.clearFocus()
                 return true

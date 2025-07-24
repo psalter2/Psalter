@@ -8,5 +8,6 @@ enum class SearchMode {
     Psalter,
     Psalm,
     Lyrics,
-    Favorites
+    Favorites,
+    Recents,
 }

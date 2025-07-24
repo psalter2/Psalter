@@ -4,11 +4,13 @@
 
     <string name="action_nightMode">Night Mode</string>
     <string name="action_random">Random</string>
+    <string name="action_recents">Recents</string>
     <string name="action_search">Search</string>
     <string name="action_shuffle">Shuffle Audio</string>
     <string name="action_sendFeedback">Send Feedback</string>
     <string name="action_enableOffline">Enable Offline</string>
 
+    <string name="pref_history">key_history</string>
     <string name="pref_nightmode">key_nightmode</string>
     <string name="pref_lastindex">key_lastindex</string>
     <string name="pref_showScore">key_showscore</string>

@@ -68,6 +68,7 @@ object Logger {
             SearchMode.Psalter -> searchPsalter(query.toInt())
             SearchMode.Psalm -> searchPsalm(query.toInt(), psalterChosen)
             SearchMode.Favorites -> event(LogEvent.SearchFavorites, mutableMapOf("PsalterChosen" to psalterChosen.toString()))
+            SearchMode.Recents -> event(LogEvent.SearchRecents, mutableMapOf("PsalterChosen" to psalterChosen.toString()))
         }
     }
     fun ratePromptAttempt(timesShown: Int){

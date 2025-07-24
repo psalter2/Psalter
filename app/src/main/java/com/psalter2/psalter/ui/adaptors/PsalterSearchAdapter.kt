@@ -42,6 +42,11 @@ class PsalterSearchAdapter(private val appContext: Context,
         showResults(psalterDb.getPsalm(psalm))
     }
 
+    fun showRecents() {
+        query = null
+        showResults(psalterDb.getRecents(storage.recentNumbers))
+    }
+
     fun showFavorites() {
         query = null
         showResults(psalterDb.getFavorites())

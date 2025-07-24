@@ -77,16 +77,24 @@ class PsalterDb(private val context: Context,
     }
 
     private fun queryRandom(): Psalter {
-        val results = queryPsalter("_id IN (SELECT _id FROM $TABLE_NAME ORDER BY RANDOM() LIMIT 1)", null, null)
+        val results = queryPsalter("_id IN (SELECT _id FROM $TABLE_NAME ORDER BY RANDOM() LIMIT 1)")
         return results[0]
     }
 
     fun getPsalm(psalmNumber: Int): Array<Psalter> {
-        return queryPsalter("psalm = $psalmNumber", null, null)
+        return queryPsalter("psalm = $psalmNumber")
+    }
+
+    fun getRecents(l: List<String>): Array<Psalter> {
+        val str = l.joinToString(",")
+        val orderByCase = l.withIndex().joinToString(" ") {
+            "WHEN ${it.value} THEN ${it.index}"
+        }
+        return queryPsalter("number IN ($str)", orderBy = "CASE number $orderByCase END")
     }
 
     fun getFavorites(): Array<Psalter> {
-        return queryPsalter("isFavorite = 1", null, null)
+        return queryPsalter("isFavorite = 1")
     }
 
     fun searchPsalter(searchText: String): Array<Psalter> {
@@ -97,7 +105,7 @@ class PsalterDb(private val context: Context,
             lyrics.parameters.add("%$searchText%")
 
             c = db.rawQuery("select _id, number, psalm, ${lyrics.text} l from psalter where l like ?", lyrics.parameters.toTypedArray())
-            while (c!!.moveToNext()) {
+            while (c.moveToNext()) {
                 val p = Psalter()
                 p.id = c.getInt(0)
                 p.number = c.getInt(1)
@@ -113,14 +121,14 @@ class PsalterDb(private val context: Context,
         return hits.toTypedArray()
     }
 
-    private fun queryPsalter(where: String, params: Array<String>?, limit: String?): Array<Psalter> {
+    private fun queryPsalter(where: String, params: Array<String>? = null, limit: String? = null, orderBy: String? = null): Array<Psalter> {
         var c: Cursor? = null
         val hits = ArrayList<Psalter>()
         try {
             val qb = SQLiteQueryBuilder()
             val columns = arrayOf("_id", "number", "psalm", "title", "lyrics", "numverses", "heading", "audioFileName", "scoreFileName", "NumVersesInsideStaff", "isFavorite")
             qb.tables = TABLE_NAME
-            c = qb.query(db, columns, where, params, null, null, null, limit)
+            c = qb.query(db, columns, where, params, null, null, orderBy, limit)
             while (c.moveToNext()) {
                 val p = Psalter()
 
