@@ -1,22 +1,22 @@
 package com.psalter2.psalter.ui.adaptors
 
 import android.content.Context
-import androidx.core.text.HtmlCompat
 import android.text.method.LinkMovementMethod
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-
-import com.psalter2.psalter.models.Psalter
-import com.psalter2.psalter.infrastructure.Logger
-import com.psalter2.psalter.infrastructure.PsalterDb
-import com.psalter2.psalter.*
+import androidx.core.text.HtmlCompat
+import com.psalter2.psalter.R
+import com.psalter2.psalter.dp
 import com.psalter2.psalter.helpers.DownloadHelper
 import com.psalter2.psalter.helpers.StorageHelper
 import com.psalter2.psalter.hide
+import com.psalter2.psalter.infrastructure.Logger
+import com.psalter2.psalter.infrastructure.PsalterDb
 import com.psalter2.psalter.invertColors
+import com.psalter2.psalter.models.Psalter
 import com.psalter2.psalter.show
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -34,6 +34,10 @@ class PsalterPagerAdapter(private val context: Context,
 ) : androidx.viewpager.widget.PagerAdapter() {
 
     private val views = ConcurrentHashMap<Int, View>()
+    private var _bottomInsets : Int? = 0
+    var bottomInsets: Int?
+        get() = _bottomInsets
+        set(value) { _bottomInsets = value }
 
     fun getView(i: Int): View? {
         return views[i]
@@ -79,6 +83,7 @@ class PsalterPagerAdapter(private val context: Context,
     }
 
     private suspend fun setLayoutData(psalter: Psalter, layout: View) {
+        layout.findViewById<View>(R.id.linearLayoutPsalter).setPadding(10.dp, 0, 10.dp, (bottomInsets ?: 0) + 140.dp)
         val tvPagerHeading : TextView = layout.findViewById(R.id.tvPagerHeading)
         tvPagerHeading.textSize = 18 * storage.textScale
         tvPagerHeading.text = psalter.heading
@@ -116,6 +121,5 @@ class PsalterPagerAdapter(private val context: Context,
             scope.launch { setLayoutData(psalterDb.getIndex(i)!!, view) }
         }
     }
-
 
 }

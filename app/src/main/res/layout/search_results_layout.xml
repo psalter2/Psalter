@@ -4,6 +4,7 @@
     android:layout_height="match_parent"
     android:orientation="horizontal"
     android:padding="10dp">
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
@@ -24,7 +25,5 @@
         android:gravity="center|fill_vertical"
         android:paddingBottom="10dp"/>
     <!--android:layout_toRightOf="@id/tvSearchNumber"-->
-
-
 
 </LinearLayout>

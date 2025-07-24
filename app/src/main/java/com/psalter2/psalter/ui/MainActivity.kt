@@ -7,7 +7,9 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.text.InputType
@@ -18,18 +20,23 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.AppCompatButton
 import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.get
 import androidx.core.view.size
+import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.LifecycleOwner
 import androidx.viewpager.widget.ViewPager
 import com.google.android.material.snackbar.Snackbar
 import com.psalter2.psalter.R
 import com.psalter2.psalter.databinding.ActivityMainBinding
+import com.psalter2.psalter.dp
 import com.psalter2.psalter.helpers.DownloadHelper
 import com.psalter2.psalter.helpers.InstantHelper
 import com.psalter2.psalter.helpers.IntentHelper
@@ -43,14 +50,13 @@ import com.psalter2.psalter.infrastructure.MediaServiceBinder
 import com.psalter2.psalter.infrastructure.PsalterDb
 import com.psalter2.psalter.models.LogEvent
 import com.psalter2.psalter.models.MediaServiceCallbacks
-import com.psalter2.psalter.models.MessageLength
 import com.psalter2.psalter.models.Psalter
 import com.psalter2.psalter.models.SearchMode
-import com.psalter2.psalter.models.forSnack
 import com.psalter2.psalter.recreateSafe
 import com.psalter2.psalter.show
 import com.psalter2.psalter.ui.adaptors.PsalterPagerAdapter
 import com.psalter2.psalter.ui.adaptors.PsalterSearchAdapter
+import com.psalter2.psalter.updateMargin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -82,6 +88,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
 
         // must be done before super(), or onCreate() will be called twice and tutorials won't work
         AppCompatDelegate.setDefaultNightMode(if(storage.nightMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -103,6 +110,27 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
             }
         })
 
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+
+            binding.statusBarScrim.updateLayoutParams { height = systemBars.top }
+            binding.toolbar.updateMargin(top = systemBars.top)
+
+            binding.lvSearchResults.setPadding(0, 0, 0, systemBars.bottom)
+
+            (binding.viewPager.adapter as PsalterPagerAdapter).bottomInsets = systemBars.bottom
+
+            binding.fab.updateMargin(bottom = systemBars.bottom + 16.dp)
+            binding.fabToggleScore.updateMargin(bottom = systemBars.bottom + 88.dp)
+            binding.fabToggleFavorite.updateMargin(bottom = systemBars.bottom + 69.2548339959.dp)
+
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+
+            binding.tableButtons.updateMargin(bottom = if (ime.bottom > 0) ime.bottom else systemBars.bottom)
+
+            insets
+        }
+
         storage.launchCount++
         // instant.transferInstantAppData() doesn't work anyways
 
@@ -115,7 +143,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         bindService(Intent(this@MainActivity, MediaService::class.java), mConnection, BIND_AUTO_CREATE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
-                snack("Need permission for showing media in notification.", MessageLength.Indefinite, "Allow", onClick =
+                snack("Need permission for showing media in notification.", Snackbar.LENGTH_INDEFINITE, "Allow", onClick =
                     { ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101) })
     }
 
@@ -387,7 +415,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         }
 
         override fun onBeginShuffling() {
-            snack("Shuffling", MessageLength.Short, "Skip") {
+            snack("Shuffling", Snackbar.LENGTH_SHORT, "Skip") {
                 mediaService?.skipToNext()
             }
         }
@@ -503,11 +531,13 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
         })
     }
 
-    private fun snack(msg: String, len: MessageLength = MessageLength.Long){
-        Snackbar.make(binding.mainCoordinatorLayout, msg, len.forSnack()).show()
+    /** [Snackbar.make] */
+    private fun snack(msg: String, len: Int = Snackbar.LENGTH_LONG){
+        Snackbar.make(binding.mainCoordinatorLayout, msg, len).show()
     }
-    private fun snack(msg: String, len: MessageLength, action: String, onClick: () -> Unit){
-        Snackbar.make(binding.mainCoordinatorLayout, msg, len.forSnack())
+    /** [Snackbar.make] */
+    private fun snack(msg: String, len: Int, action: String, onClick: () -> Unit){
+        Snackbar.make(binding.mainCoordinatorLayout, msg, len)
                 .setAction(action) { onClick() }.show()
     }
 

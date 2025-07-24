@@ -9,6 +9,12 @@
     android:layout_width="match_parent"
     android:keepScreenOn="true">
 
+    <View
+        android:id="@+id/statusBarScrim"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/colorPrimaryDark" />
+
     <LinearLayout
         android:id="@+id/linearLayout"
         android:layout_width="match_parent"
@@ -32,7 +38,8 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:visibility="gone"/>
+            android:visibility="gone"
+            android:clipToPadding="false"/>
 
         <androidx.viewpager.widget.ViewPager
             android:id="@+id/viewPager"
@@ -46,6 +53,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textAppearance="@style/PagerTitleStrip" />
+
         </androidx.viewpager.widget.ViewPager>
 
         <TableLayout

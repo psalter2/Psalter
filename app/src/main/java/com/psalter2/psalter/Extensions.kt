@@ -1,13 +1,14 @@
 package com.psalter2.psalter
 
 import android.app.Activity
+import android.content.res.Resources
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.drawable.Drawable
 import android.os.Build
+import android.view.View
+import android.view.ViewGroup
 import androidx.annotation.DrawableRes
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import android.view.View
-import java.util.ArrayList
 
 fun String.allIndexesOf(query: String): List<Int> {
     val rtn = ArrayList<Int>()
@@ -51,4 +52,19 @@ fun Activity.recreateSafe() {
         startActivity(intent)
     }
     else recreate()
+}
+
+val Int.dp: Int
+    get() = (this * Resources.getSystem().displayMetrics.density).toInt()
+
+val Double.dp: Int
+    get() = (this * Resources.getSystem().displayMetrics.density).toInt()
+
+fun View.updateMargin(left: Int? = null, top: Int? = null, right: Int? = null, bottom: Int? = null){
+    val lp = layoutParams as ViewGroup.MarginLayoutParams
+    left?.let { lp.leftMargin = it }
+    top?.let { lp.topMargin = top }
+    right?.let { lp.rightMargin = right }
+    bottom?.let { lp.bottomMargin = bottom }
+    layoutParams = lp
 }
