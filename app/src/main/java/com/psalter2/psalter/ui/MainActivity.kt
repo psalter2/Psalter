@@ -214,6 +214,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
             Logger.event(LogEvent.GoToRandom)
             val next = psalterDb.getRandom()
             binding.viewPager.setCurrentItem(next.id, true)
+            storage.addRecentNumber(next.number)
         }
         rateHelper.showRateDialogIfAppropriate()
     }
