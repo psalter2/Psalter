@@ -24,11 +24,14 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.URL
 
+// Missing the following audio files: 2_2, 17, 23_2, 33, 46, 91, 116_2, 135_2, 140_2, 156,
+//  199, 201, 204_2, 212_2, 234, 247, 260_2, 289_2, 354_2, 365_2, 384, 389_2, 391_2
+// this is potentially a place to get them from: https://www.youtube.com/playlist?list=PLZZAT1pP5dJqq3YxMNM-c69_N-fmHa1k4
 class DownloadHelper(private val context: Context, private val storage: StorageHelper) {
     val saveDir: File =
-            if (Build.VERSION.SDK_INT >= 26 && context.packageManager.isInstantApp)
-                context.filesDir
-            else context.getExternalFilesDir(null) ?: throw Exception("Storage not mounted")
+        if (Build.VERSION.SDK_INT >= 26 && context.packageManager.isInstantApp)
+            context.filesDir
+        else context.getExternalFilesDir(null) ?: throw Exception("Storage not mounted")
 
     private val baseUrl = context.getString(R.string.mediaBaseUrl)
     suspend fun downloadFile(path: String): File? = withContext(Dispatchers.IO) {
