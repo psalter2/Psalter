@@ -28,6 +28,7 @@ import androidx.appcompat.widget.AppCompatButton
 import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.get
 import androidx.core.view.size
@@ -470,6 +471,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope(), Lifecyc
 
     private fun initViews() {
         setSupportActionBar(binding.toolbar)
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
 
         binding.fab.setOnClickListener { togglePlay() }
         binding.fab.setOnLongClickListener { shuffle() }
